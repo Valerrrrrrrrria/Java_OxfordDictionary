@@ -21,18 +21,26 @@
         app:layout_constraintTop_toTopOf="parent">
 
         <TextView
-            android:id="@+id/apiTextView"
+            android:id="@+id/appTextView"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="API" />
 
         <EditText
-            android:id="@+id/apiEditText"
+            android:id="@+id/appIdTextView"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:ems="10"
             android:inputType="textPersonName"
-            android:text="Enter your API" />
+            android:text="Application ID" />
+
+        <EditText
+            android:id="@+id/appKeyTextView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ems="10"
+            android:inputType="textPersonName"
+            android:text="Application Keys" />
 
         <Switch
             android:id="@+id/isDarkSwitch"

@@ -14,15 +14,24 @@ public class SettingsActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_settings);
 
-        EditText apiEditText = (EditText) findViewById(R.id.apiEditText);
+        EditText appIdEditText = (EditText) findViewById(R.id.appIdTextView);
+        EditText appKeyEditText = (EditText) findViewById(R.id.appKeyTextView);
         Switch isDarkSwitch = (Switch) findViewById(R.id.isDarkSwitch);
 
         Intent intent = getIntent();
-        String api = intent.getStringExtra("API");
+        String appId = intent.getStringExtra("AppId");
+        String appKey = intent.getStringExtra("AppKey");
+
+
+
         boolean isNight = intent.getBooleanExtra("isNight", false);
 
-        if (api != null) {
-            apiEditText.setText(api);
+        if (appId != null) {
+            appIdEditText.setText(appId);
+        }
+
+        if (appKey != null) {
+            appKeyEditText.setText(appKey);
         }
 
         isDarkSwitch.setChecked(isNight); // переключатель для темы
