@@ -3,6 +3,7 @@ package com.example.oxforddict;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
@@ -26,6 +27,10 @@ public class MainActivity extends AppCompatActivity {
         switch(item.getItemId()) {
             case R.id.settings:
                 Log.i("Menu iten selected", "Settings");
+                Intent intent = new Intent(getApplicationContext(), SettingsActivity.class);
+                intent.putExtra("API", "5e360595");
+                intent.putExtra("isNight", false);
+                startActivity(intent);
                 return true;
             default:
                 return false;
@@ -36,5 +41,8 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        
+
     }
 }
