@@ -20,6 +20,12 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.google.gson.JsonPrimitive;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -34,6 +40,8 @@ import java.net.URL;
 import java.util.ArrayList;
 
 import javax.net.ssl.HttpsURLConnection;
+
+import static com.jayway.jsonpath.JsonPath.parse;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -216,7 +224,38 @@ public class MainActivity extends AppCompatActivity {
 
     public void ParsingJSON (JSONObject jsonObject) {
             Log.i("IN PARSING", jsonObject.toString());
-        }
+
+            String jsonString = jsonObject.toString();
+            JsonParser parser = new JsonParser();
+            JsonElement rootNode = parser.parse(jsonString);
+
+            JsonArray resultsArr = new JsonArray();
+
+            if (rootNode.isJsonObject()) {
+                JsonObject details = rootNode.getAsJsonObject();
+                JsonElement nameNode = details.get("id");
+                System.out.println("ID: " + nameNode.getAsString());
+
+                JsonArray results = details.getAsJsonArray("results");
+                JsonArray resultsArray;
+
+                for (int i = 0; i<results.size(); i++) {
+                    resultsArray = results.getAsJsonArray();
+                    for (int j = 0; j<resultsArray.size(); j++) {
+                        resultsArr.add(resultsArray.get(i).getAsJsonObject().getAsJsonArray("lexicalEntries"));
+                    }
+                }
+
+                //JsonArray lexicalEntriesArray = new JsonArray();
+                for (int i=0; i<resultsArr.size(); i++) {
+                    System.out.println("RESULTSARR: " + resultsArr.get(i));
+                }
+
+
+
+            }
+
+    }
 
     public void nightTheme() {
         // Night mode
