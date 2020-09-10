@@ -2,11 +2,16 @@ package com.example.oxforddict;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.constraintlayout.widget.ConstraintLayout;
 
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.RemoteException;
+import android.util.JsonReader;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -33,6 +38,13 @@ import javax.net.ssl.HttpsURLConnection;
 public class MainActivity extends AppCompatActivity {
 
     ArrayList<String> result;
+    static boolean isNight;
+    ConstraintLayout mainLayout;
+    EditText searchEditText;
+    Button searchButton;
+    static SharedPreferences sharedPreferences;
+    String appId;
+    String appKey;
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -50,9 +62,9 @@ public class MainActivity extends AppCompatActivity {
             case R.id.settings:
                 Log.i("Menu iten selected", "Settings");
                 Intent intent = new Intent(getApplicationContext(), SettingsActivity.class);
-                intent.putExtra("AppId", "5e360595");
-                intent.putExtra("AppKey", "6ef6b77b7b0bcdd1a395e409655558e9");
-                intent.putExtra("isNight", false);
+                intent.putExtra("AppId", appId);
+                intent.putExtra("AppKey", appKey);
+                intent.putExtra("isNight", isNight);
                 startActivity(intent);
                 return true;
             default:
@@ -65,11 +77,24 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        final String app_id = "5e360595";
-        final String app_key = "6ef6b77b7b0bcdd1a395e409655558e9";
+        sharedPreferences = this.getSharedPreferences("com.example.oxforddict", Context.MODE_PRIVATE);
+        //sharedPreferences.edit().putString("AppId","5e360595").apply();
+        //sharedPreferences.edit().putString("AppKey","6ef6b77b7b0bcdd1a395e409655558e9").apply();
+        //sharedPreferences.edit().putBoolean("isNight", false).apply();
 
-        final EditText searchEditText = (EditText) findViewById(R.id.searchEditText);
-        Button searchButton = (Button) findViewById(R.id.searchButton);
+        appId = sharedPreferences.getString("AppId", "");
+        appKey = sharedPreferences.getString("AppKey", "");
+        isNight = sharedPreferences.getBoolean("isNight", false);
+
+        Log.i("ISNIGHT", "" + isNight);
+
+
+        searchEditText = (EditText) findViewById(R.id.searchEditText);
+        searchButton = (Button) findViewById(R.id.searchButton);
+        mainLayout = (ConstraintLayout) findViewById(R.id.mainLayout);
+
+        if (isNight) nightTheme();
+        else dayTheme();
 
         searchButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -77,45 +102,74 @@ public class MainActivity extends AppCompatActivity {
                 String word = searchEditText.getText().toString();
                 searchEditText.setText("");
 
-                String fields = "pronunciations";
-                new CallbackTask().execute(dictionaryEntries(word, fields), app_id, app_key);
+                new CallbackTask().execute("", appId, appKey, word);
 
             }
         });
     }
 
     private String dictionaryEntries(final String myWord, final String fields) {
-        final String language = "en-gb";
         final String word = myWord;
-
-        //final String fields = "pronunciations";
-        //final String fields = "definitions";
-        //final String fields = "etymologies";
-
-
-        final String strictMatch = "false";
         final String word_id = word.toLowerCase();
-        //return "https://od-api.oxforddictionaries.com:443/api/v2/entries/" + language + "/" + word_id + "?" + "fields=" + fields + "&strictMatch=" + strictMatch;
+
         return "https://od-api.oxforddictionaries.com/api/v2/entries/en-gb/" + word_id + "?strictMatch=false";
     }
 
     private class CallbackTask extends AsyncTask<String, Integer, String> {
 
+        String appId;
+        String appKey;
+        final String language = "en-gb";
+
+        protected String getLemma(String rawWord) throws IOException, JSONException {
+            String url = "https://od-api.oxforddictionaries.com:443/api/v2/lemmas/" + language + "/" + rawWord.toLowerCase();
+
+            BufferedReader breader = new BufferedReader(new InputStreamReader(getConnection(url).getInputStream()));
+
+            StringBuilder stringBuilder = new StringBuilder();
+            String line = null;
+            while ((line = breader.readLine()) != null) {
+                stringBuilder.append(line);
+            }
+
+            //Log.i("",stringBuilder.toString());
+            JSONObject reader = new JSONObject(stringBuilder.toString());
+
+            return reader
+                    .getJSONArray("results")
+                    .getJSONObject(0)
+                    .getJSONArray("lexicalEntries")
+                    .getJSONObject(0)
+                    .getJSONArray("inflectionOf")
+                    .getJSONObject(0)
+                    .getString("text");
+        }
+
+        protected HttpsURLConnection getConnection(String rawurl) throws IOException {
+
+            URL url = new URL(rawurl);
+            HttpsURLConnection urlConnection = (HttpsURLConnection) url.openConnection();
+            urlConnection.setRequestProperty("Accept","application/json");
+            urlConnection.setRequestProperty("app_id",appId);
+            urlConnection.setRequestProperty("app_key",appKey);
+            urlConnection.setConnectTimeout(100);
+
+            return urlConnection;
+        }
+
         @Override
         protected String doInBackground(String... params) {
 
             //TODO: replace with your own app id and app key
-            final String app_id = params[1];
-            final String app_key = params[2];
-            try {
-                URL url = new URL(params[0]);
-                HttpsURLConnection urlConnection = (HttpsURLConnection) url.openConnection();
-                urlConnection.setRequestProperty("Accept","application/json");
-                urlConnection.setRequestProperty("app_id",app_id);
-                urlConnection.setRequestProperty("app_key",app_key);
+            appId  = params[1];
+            appKey = params[2];
+            final String rawWord = params[3];
 
+            try {
+
+                HttpsURLConnection connect = getConnection(dictionaryEntries(getLemma(rawWord), ""));
                 // read the output from the server
-                BufferedReader reader = new BufferedReader(new InputStreamReader(urlConnection.getInputStream()));
+                BufferedReader reader = new BufferedReader(new InputStreamReader(connect.getInputStream()));
                 StringBuilder stringBuilder = new StringBuilder();
 
                 String line = null;
@@ -149,33 +203,37 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    // пока void, дальше решу
-        public void ParsingJSON (JSONObject jsonObject) {
+    @Override
+    protected void onResume() {
+        super.onResume();
+        appId = sharedPreferences.getString("AppId", "");
+        appKey = sharedPreferences.getString("AppKey", "");
+        isNight = sharedPreferences.getBoolean("isNight", false);
+
+        if (isNight) nightTheme();
+        else dayTheme();
+    }
+
+    public void ParsingJSON (JSONObject jsonObject) {
             Log.i("IN PARSING", jsonObject.toString());
-
-            try {
-                String oxtInfo = jsonObject.getString("results");
-                Log.i("BY PART RESULTS ", oxtInfo);
-
-//                JSONArray jsonArray = new JSONArray(oxtInfo);
-//                for (int i = 0; i < jsonArray.length(); i++) {
-//                    JSONObject jsonPart = jsonArray.getJSONObject(i);
-//                    //Log.i("BY lexicalEntries ", jsonPart.getString("lexicalEntries"));
-//
-//                    JSONArray jsonArray1 = new JSONArray(jsonPart.getString("lexicalEntries"));
-//                    for (int j = 0; j < jsonArray1.length(); j++) {
-//                        JSONObject jsonPart1 = jsonArray1.getJSONObject(j);
-//                        Log.i("BY entries ", jsonPart1.getString("entries"));
-//
-//
-//
-//                    }
-//
-//                }
-
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-
         }
+
+    public void nightTheme() {
+        // Night mode
+        isNight = true;
+
+        mainLayout.setBackgroundColor(getResources().getColor(R.color.colorNight));
+
+    }
+
+
+    public void dayTheme() {
+        // Day mode
+        isNight = false;
+
+        mainLayout.setBackgroundColor(getResources().getColor(R.color.colorDay));
+
+    }
+
+
 }
