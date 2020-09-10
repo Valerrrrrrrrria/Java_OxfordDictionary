@@ -25,6 +25,8 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonPrimitive;
+import com.jayway.jsonpath.Configuration;
+import com.jayway.jsonpath.JsonPath;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -38,6 +40,7 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 
 import javax.net.ssl.HttpsURLConnection;
 
@@ -139,18 +142,8 @@ public class MainActivity extends AppCompatActivity {
             while ((line = breader.readLine()) != null) {
                 stringBuilder.append(line);
             }
-
-            //Log.i("",stringBuilder.toString());
-            JSONObject reader = new JSONObject(stringBuilder.toString());
-
-            return reader
-                    .getJSONArray("results")
-                    .getJSONObject(0)
-                    .getJSONArray("lexicalEntries")
-                    .getJSONObject(0)
-                    .getJSONArray("inflectionOf")
-                    .getJSONObject(0)
-                    .getString("text");
+            ArrayList<String> parsed = parse(stringBuilder.toString()).read("$..lexicalEntries[0].inflectionOf[0].text");
+            return parsed.get(0);
         }
 
         protected HttpsURLConnection getConnection(String rawurl) throws IOException {
@@ -198,16 +191,17 @@ public class MainActivity extends AppCompatActivity {
         protected void onPostExecute(String result) {
             super.onPostExecute(result);
 
-            try {
-                JSONObject jsonObject = new JSONObject(result);
-                //Log.i("ALL ", jsonObject.toString());
-                ParsingJSON(jsonObject);
+            Object document = Configuration.defaultConfiguration().jsonProvider().parse(result);
+            //ArrayList<String> parsed = parse(stringBuilder.toString()).read("$..lexicalEntries[0].inflectionOf[0].text");
 
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
+            ArrayList<String> lexical = JsonPath.read(document,"$..lexicalCategory.text");
+            ArrayList<URL> audios = JsonPath.read(document,"$..audioFile");
+            ArrayList<String> dialects = JsonPath.read(document,"$..dialects");
+            ArrayList<LinkedHashMap<String, Object>> senses = JsonPath.read(document,"$.results[0].lexicalEntries[0].entries[0].senses");
 
-            //System.out.println(result);
+            for (int i = 0; i<senses.size(); i++)
+                Log.i("SENSES1", "Definition " + senses.get(i).get("definitions").toString() + "EXAMPLES" + senses.get(i).get("examples").toString());
+
         }
     }
 
@@ -220,41 +214,6 @@ public class MainActivity extends AppCompatActivity {
 
         if (isNight) nightTheme();
         else dayTheme();
-    }
-
-    public void ParsingJSON (JSONObject jsonObject) {
-            Log.i("IN PARSING", jsonObject.toString());
-
-            String jsonString = jsonObject.toString();
-            JsonParser parser = new JsonParser();
-            JsonElement rootNode = parser.parse(jsonString);
-
-            JsonArray resultsArr = new JsonArray();
-
-            if (rootNode.isJsonObject()) {
-                JsonObject details = rootNode.getAsJsonObject();
-                JsonElement nameNode = details.get("id");
-                System.out.println("ID: " + nameNode.getAsString());
-
-                JsonArray results = details.getAsJsonArray("results");
-                JsonArray resultsArray;
-
-                for (int i = 0; i<results.size(); i++) {
-                    resultsArray = results.getAsJsonArray();
-                    for (int j = 0; j<resultsArray.size(); j++) {
-                        resultsArr.add(resultsArray.get(i).getAsJsonObject().getAsJsonArray("lexicalEntries"));
-                    }
-                }
-
-                //JsonArray lexicalEntriesArray = new JsonArray();
-                for (int i=0; i<resultsArr.size(); i++) {
-                    System.out.println("RESULTSARR: " + resultsArr.get(i));
-                }
-
-
-
-            }
-
     }
 
     public void nightTheme() {
