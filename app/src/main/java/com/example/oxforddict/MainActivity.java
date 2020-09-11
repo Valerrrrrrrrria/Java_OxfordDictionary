@@ -184,7 +184,11 @@ public class MainActivity extends AppCompatActivity {
                 stringBuilder.append(line);
             }
             ArrayList<String> parsed = parse(stringBuilder.toString()).read("$..lexicalEntries[0].inflectionOf[0].text");
-            return parsed.get(0);
+
+            if (parsed.size() != 0)
+                return parsed.get(0);
+            else
+                return rawWord;
         }
 
         protected HttpsURLConnection getConnection(String rawurl) throws IOException {
@@ -241,8 +245,8 @@ public class MainActivity extends AppCompatActivity {
             ArrayList<String> dialects = JsonPath.read(document, "$..dialects");
             ArrayList<LinkedHashMap<String, Object>> senses = JsonPath.read(document, "$.results[0].lexicalEntries[0].entries[0].senses");
 
-            for (int i = 0; i < senses.size(); i++)
-                Log.i("SENSES1", "Definition " + senses.get(i).get("definitions").toString() + "EXAMPLES" + senses.get(i).get("examples").toString());
+            //for (int i = 0; i < senses.size(); i++)
+            //    Log.i("SENSES1", "Definition " + senses.get(i).get("definitions").toString() + "EXAMPLES" + senses.get(i).get("examples").toString());
 
             defIsTextView.setText(lexical.get(0).toString());
             soundImageView.setVisibility(View.VISIBLE);
@@ -283,6 +287,7 @@ public class MainActivity extends AppCompatActivity {
         defIsTextView.setTextColor(getResources().getColor(R.color.colorDay));
         translTextView.setTextColor(getResources().getColor(R.color.colorDay));
         resultTextView.setTextColor(getResources().getColor(R.color.colorDay));
+        soundImageView.setImageResource(R.drawable.soundblack);
     }
 
 
@@ -294,6 +299,8 @@ public class MainActivity extends AppCompatActivity {
         defIsTextView.setTextColor(getResources().getColor(R.color.colorNight));
         translTextView.setTextColor(getResources().getColor(R.color.colorNight));
         resultTextView.setTextColor(getResources().getColor(R.color.colorNight));
+        soundImageView.setImageResource(R.drawable.sound);
+
     }
 
 }
