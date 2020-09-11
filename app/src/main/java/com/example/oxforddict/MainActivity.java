@@ -232,7 +232,6 @@ public class MainActivity extends AppCompatActivity {
             super.onPostExecute(result);
 
             Object document = Configuration.defaultConfiguration().jsonProvider().parse(result);
-            //ArrayList<String> parsed = parse(stringBuilder.toString()).read("$..lexicalEntries[0].inflectionOf[0].text");
 
             ArrayList<String> lexical = JsonPath.read(document, "$..lexicalCategory.id");
             ArrayList<String> audios = JsonPath.read(document, "$..audioFile");
@@ -251,11 +250,13 @@ public class MainActivity extends AppCompatActivity {
 
             String allSenses = "";
             for (int i = 0; i < senses.size(); i++) {
-                allSenses += senses.get(i).get("definitions").toString() + "\n" + senses.get(i).get("examples").toString() + "\n";
+                allSenses += senses.get(i).get("definitions").toString().replace("[\"", "").replace("\"]","") +
+                        "\n" + "Examples:" + "\n" + senses.get(i).get("examples").toString().replace("[{\"text\":\"","").
+                        replace("\"},","").
+                        replace("{\"text\":\"", "").
+                        replace("\"}]","") + "\n\n";
             }
 
-//            DownloadFile audio = new DownloadFile();
-//            audio.execute(audios.get(0));
 
             resultTextView.setText(allSenses);
 
@@ -295,48 +296,4 @@ public class MainActivity extends AppCompatActivity {
         resultTextView.setTextColor(getResources().getColor(R.color.colorNight));
     }
 
-    private class DownloadFile extends AsyncTask<String, Integer, String> {
-        @Override
-        protected String doInBackground(String... urls) {
-            int count;
-            try {
-                URL urlSound = new URL(urls[0]);
-                HttpURLConnection connection = (HttpURLConnection) urlSound.openConnection();
-                connection.connect();
-
-                // this will be useful so that you can show a tipical 0-100% progress bar
-                int lenghtOfFile = connection.getContentLength();
-
-                // downlod the file
-                InputStream input = new BufferedInputStream(urlSound.openStream());
-
-                Base64InputStream in = new Base64InputStream(input,0);
-
-                MediaPlayer mediaPlayer = new MediaPlayer();
-
-                Log.i("AUDIOINFO", input.toString());
-
-                //OutputStream output = new FileOutputStream("/sdcard/somewhere/nameofthefile.mp3");
-                byte data[] = new byte[1024];
-
-//                long total = 0;
-//
-//                while ((count = input.read(data)) != -1) {
-//                    data += data;
-//                }
-                //total += count;
-                // publishing the progress....
-                //ublishProgress((int)(total*100/lenghtOfFile));
-                //output.write(data, 0, count);
-                // }
-
-                //output.flush();
-                //output.close();
-                input.close();
-            } catch (Exception e) {
-            }
-            return null;
-        }
-
-    }
 }
