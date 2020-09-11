@@ -7,11 +7,16 @@ import androidx.constraintlayout.widget.ConstraintLayout;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.media.AudioFormat;
+import android.media.AudioManager;
 import android.media.Image;
+import android.media.MediaPlayer;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.RemoteException;
+import android.provider.MediaStore;
+import android.util.Base64InputStream;
 import android.util.JsonReader;
 import android.util.Log;
 import android.view.Menu;
@@ -35,19 +40,25 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 
 import javax.net.ssl.HttpsURLConnection;
 
 import static com.jayway.jsonpath.JsonPath.parse;
+
+
 
 public class MainActivity extends AppCompatActivity {
 
@@ -56,7 +67,8 @@ public class MainActivity extends AppCompatActivity {
     ConstraintLayout mainLayout;
     EditText searchEditText;
     Button searchButton;
-    TextView wordIsTextView, defIsTextView, translTextView;
+    String audioURL;
+    TextView wordIsTextView, defIsTextView, translTextView, resultTextView;
     ImageView soundImageView;
     static SharedPreferences sharedPreferences;
     String appId;
@@ -74,7 +86,7 @@ public class MainActivity extends AppCompatActivity {
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         super.onOptionsItemSelected(item);
 
-        switch(item.getItemId()) {
+        switch (item.getItemId()) {
             case R.id.settings:
                 Log.i("Menu iten selected", "Settings");
                 Intent intent = new Intent(getApplicationContext(), SettingsActivity.class);
@@ -112,6 +124,7 @@ public class MainActivity extends AppCompatActivity {
         defIsTextView = (TextView) findViewById(R.id.defIsTextView);
         translTextView = (TextView) findViewById(R.id.translTextView);
         soundImageView = (ImageView) findViewById(R.id.soundImageView);
+        resultTextView = (TextView) findViewById(R.id.resultTextView);
 
         if (isNight) nightTheme();
         else dayTheme();
@@ -124,6 +137,25 @@ public class MainActivity extends AppCompatActivity {
                 searchEditText.setText("");
 
                 new CallbackTask().execute("", appId, appKey, word);
+            }
+        });
+
+        soundImageView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                MediaPlayer player = new MediaPlayer();
+                player.setAudioStreamType(AudioManager.STREAM_MUSIC);
+                try {
+                    player.setDataSource(audioURL);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                try {
+                    player.prepare();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                player.start();
             }
         });
     }
@@ -159,9 +191,9 @@ public class MainActivity extends AppCompatActivity {
 
             URL url = new URL(rawurl);
             HttpsURLConnection urlConnection = (HttpsURLConnection) url.openConnection();
-            urlConnection.setRequestProperty("Accept","application/json");
-            urlConnection.setRequestProperty("app_id",appId);
-            urlConnection.setRequestProperty("app_key",appKey);
+            urlConnection.setRequestProperty("Accept", "application/json");
+            urlConnection.setRequestProperty("app_id", appId);
+            urlConnection.setRequestProperty("app_key", appKey);
             urlConnection.setConnectTimeout(100);
 
             return urlConnection;
@@ -171,7 +203,7 @@ public class MainActivity extends AppCompatActivity {
         protected String doInBackground(String... params) {
 
             //TODO: replace with your own app id and app key
-            appId  = params[1];
+            appId = params[1];
             appKey = params[2];
             final String rawWord = params[3];
 
@@ -189,8 +221,7 @@ public class MainActivity extends AppCompatActivity {
 
                 return stringBuilder.toString();
 
-            }
-            catch (Exception e) {
+            } catch (Exception e) {
                 e.printStackTrace();
                 return e.toString();
             }
@@ -203,18 +234,30 @@ public class MainActivity extends AppCompatActivity {
             Object document = Configuration.defaultConfiguration().jsonProvider().parse(result);
             //ArrayList<String> parsed = parse(stringBuilder.toString()).read("$..lexicalEntries[0].inflectionOf[0].text");
 
-            ArrayList<String> lexical = JsonPath.read(document,"$..lexicalCategory.id");
-            ArrayList<URL> audios = JsonPath.read(document,"$..audioFile");
-            ArrayList<String> transcriptions = JsonPath.read(document,"$..phoneticSpelling");
-            ArrayList<String> dialects = JsonPath.read(document,"$..dialects");
-            ArrayList<LinkedHashMap<String, Object>> senses = JsonPath.read(document,"$.results[0].lexicalEntries[0].entries[0].senses");
+            ArrayList<String> lexical = JsonPath.read(document, "$..lexicalCategory.id");
+            ArrayList<String> audios = JsonPath.read(document, "$..audioFile");
+            audioURL = audios.get(0);
 
-            for (int i = 0; i<senses.size(); i++)
+            ArrayList<String> transcriptions = JsonPath.read(document, "$..phoneticSpelling");
+            ArrayList<String> dialects = JsonPath.read(document, "$..dialects");
+            ArrayList<LinkedHashMap<String, Object>> senses = JsonPath.read(document, "$.results[0].lexicalEntries[0].entries[0].senses");
+
+            for (int i = 0; i < senses.size(); i++)
                 Log.i("SENSES1", "Definition " + senses.get(i).get("definitions").toString() + "EXAMPLES" + senses.get(i).get("examples").toString());
 
             defIsTextView.setText(lexical.get(0).toString());
             soundImageView.setVisibility(View.VISIBLE);
             translTextView.setText("/" + transcriptions.get(0).toString() + "/");
+
+            String allSenses = "";
+            for (int i = 0; i < senses.size(); i++) {
+                allSenses += senses.get(i).get("definitions").toString() + "\n" + senses.get(i).get("examples").toString() + "\n";
+            }
+
+//            DownloadFile audio = new DownloadFile();
+//            audio.execute(audios.get(0));
+
+            resultTextView.setText(allSenses);
 
 
         }
@@ -234,7 +277,6 @@ public class MainActivity extends AppCompatActivity {
     public void nightTheme() {
         // Night mode
         isNight = true;
-
         mainLayout.setBackgroundColor(getResources().getColor(R.color.colorNight));
 
     }
@@ -243,10 +285,52 @@ public class MainActivity extends AppCompatActivity {
     public void dayTheme() {
         // Day mode
         isNight = false;
-
         mainLayout.setBackgroundColor(getResources().getColor(R.color.colorDay));
 
     }
 
+    private class DownloadFile extends AsyncTask<String, Integer, String> {
+        @Override
+        protected String doInBackground(String... urls) {
+            int count;
+            try {
+                URL urlSound = new URL(urls[0]);
+                HttpURLConnection connection = (HttpURLConnection) urlSound.openConnection();
+                connection.connect();
 
+                // this will be useful so that you can show a tipical 0-100% progress bar
+                int lenghtOfFile = connection.getContentLength();
+
+                // downlod the file
+                InputStream input = new BufferedInputStream(urlSound.openStream());
+
+                Base64InputStream in = new Base64InputStream(input,0);
+
+                MediaPlayer mediaPlayer = new MediaPlayer();
+
+                Log.i("AUDIOINFO", input.toString());
+
+                //OutputStream output = new FileOutputStream("/sdcard/somewhere/nameofthefile.mp3");
+                byte data[] = new byte[1024];
+
+//                long total = 0;
+//
+//                while ((count = input.read(data)) != -1) {
+//                    data += data;
+//                }
+                //total += count;
+                // publishing the progress....
+                //ublishProgress((int)(total*100/lenghtOfFile));
+                //output.write(data, 0, count);
+                // }
+
+                //output.flush();
+                //output.close();
+                input.close();
+            } catch (Exception e) {
+            }
+            return null;
+        }
+
+    }
 }
