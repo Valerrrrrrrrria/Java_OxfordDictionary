@@ -278,7 +278,10 @@ public class MainActivity extends AppCompatActivity {
         // Night mode
         isNight = true;
         mainLayout.setBackgroundColor(getResources().getColor(R.color.colorNight));
-
+        wordIsTextView.setTextColor(getResources().getColor(R.color.colorDay));
+        defIsTextView.setTextColor(getResources().getColor(R.color.colorDay));
+        translTextView.setTextColor(getResources().getColor(R.color.colorDay));
+        resultTextView.setTextColor(getResources().getColor(R.color.colorDay));
     }
 
 
@@ -286,7 +289,10 @@ public class MainActivity extends AppCompatActivity {
         // Day mode
         isNight = false;
         mainLayout.setBackgroundColor(getResources().getColor(R.color.colorDay));
-
+        wordIsTextView.setTextColor(getResources().getColor(R.color.colorNight));
+        defIsTextView.setTextColor(getResources().getColor(R.color.colorNight));
+        translTextView.setTextColor(getResources().getColor(R.color.colorNight));
+        resultTextView.setTextColor(getResources().getColor(R.color.colorNight));
     }
 
     private class DownloadFile extends AsyncTask<String, Integer, String> {
