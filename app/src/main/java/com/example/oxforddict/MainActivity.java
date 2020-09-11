@@ -7,6 +7,7 @@ import androidx.constraintlayout.widget.ConstraintLayout;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.media.Image;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
@@ -19,6 +20,8 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
+import android.widget.TextView;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -53,6 +56,8 @@ public class MainActivity extends AppCompatActivity {
     ConstraintLayout mainLayout;
     EditText searchEditText;
     Button searchButton;
+    TextView wordIsTextView, defIsTextView, translTextView;
+    ImageView soundImageView;
     static SharedPreferences sharedPreferences;
     String appId;
     String appKey;
@@ -103,6 +108,10 @@ public class MainActivity extends AppCompatActivity {
         searchEditText = (EditText) findViewById(R.id.searchEditText);
         searchButton = (Button) findViewById(R.id.searchButton);
         mainLayout = (ConstraintLayout) findViewById(R.id.mainLayout);
+        wordIsTextView = (TextView) findViewById(R.id.wordIsTextView);
+        defIsTextView = (TextView) findViewById(R.id.defIsTextView);
+        translTextView = (TextView) findViewById(R.id.translTextView);
+        soundImageView = (ImageView) findViewById(R.id.soundImageView);
 
         if (isNight) nightTheme();
         else dayTheme();
@@ -111,10 +120,10 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 String word = searchEditText.getText().toString();
+                wordIsTextView.setText(searchEditText.getText());
                 searchEditText.setText("");
 
                 new CallbackTask().execute("", appId, appKey, word);
-
             }
         });
     }
@@ -194,13 +203,19 @@ public class MainActivity extends AppCompatActivity {
             Object document = Configuration.defaultConfiguration().jsonProvider().parse(result);
             //ArrayList<String> parsed = parse(stringBuilder.toString()).read("$..lexicalEntries[0].inflectionOf[0].text");
 
-            ArrayList<String> lexical = JsonPath.read(document,"$..lexicalCategory.text");
+            ArrayList<String> lexical = JsonPath.read(document,"$..lexicalCategory.id");
             ArrayList<URL> audios = JsonPath.read(document,"$..audioFile");
+            ArrayList<String> transcriptions = JsonPath.read(document,"$..phoneticSpelling");
             ArrayList<String> dialects = JsonPath.read(document,"$..dialects");
             ArrayList<LinkedHashMap<String, Object>> senses = JsonPath.read(document,"$.results[0].lexicalEntries[0].entries[0].senses");
 
             for (int i = 0; i<senses.size(); i++)
                 Log.i("SENSES1", "Definition " + senses.get(i).get("definitions").toString() + "EXAMPLES" + senses.get(i).get("examples").toString());
+
+            defIsTextView.setText(lexical.get(0).toString());
+            soundImageView.setVisibility(View.VISIBLE);
+            translTextView.setText("/" + transcriptions.get(0).toString() + "/");
+
 
         }
     }
