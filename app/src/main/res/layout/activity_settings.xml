@@ -39,13 +39,6 @@
             android:inputType="textPersonName"
             android:text="Application Keys" />
 
-        <Switch
-            android:id="@+id/isDarkSwitch"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Dark theme"
-            android:textSize="14sp" />
-
         <Button
             android:id="@+id/saveButton"
             android:layout_width="match_parent"

@@ -28,13 +28,11 @@ public class SettingsActivity extends AppCompatActivity {
 
         appIdEditText = (EditText) findViewById(R.id.appIdTextView);
         appKeyEditText = (EditText) findViewById(R.id.appKeyTextView);
-        isDarkSwitch = (Switch) findViewById(R.id.isDarkSwitch);
         settingsLayout = (ConstraintLayout) findViewById(R.id.settingsLayout);
 
         final Intent intent = getIntent();
         String appId = intent.getStringExtra("AppId");
         String appKey = intent.getStringExtra("AppKey");
-        isNight = intent.getBooleanExtra("isNight", false);
 
         if (isNight) nightTheme();
         else dayTheme();
@@ -48,7 +46,6 @@ public class SettingsActivity extends AppCompatActivity {
             appKeyEditText.setText(appKey);
         }
 
-        isDarkSwitch.setChecked(isNight); // переключатель для темы
 
         Button saveButton = (Button) findViewById(R.id.saveButton);
         saveButton.setOnClickListener(new View.OnClickListener() {
@@ -57,34 +54,12 @@ public class SettingsActivity extends AppCompatActivity {
                 String appIdNew = appIdEditText.getText().toString();
                 String appKeyNew = appKeyEditText.getText().toString();
 
-                MainActivity.sharedPreferences.edit().putString("AppId",appIdNew).apply();
-                MainActivity.sharedPreferences.edit().putString("AppKey",appKeyNew).apply();
-                //MainActivity.sharedPreferences.edit().putBoolean("isNight", isNight).apply();
+                MainActivityViewModel.sharedPreferences.edit().putString("AppId",appIdNew).apply();
+                MainActivityViewModel.sharedPreferences.edit().putString("AppKey",appKeyNew).apply();
 
                 Log.i("Новые данные: ", "id: "+ appIdNew + " key" + appKeyNew);
             }
         });
-
-
-        isDarkSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                // Change theme
-                if (isDarkSwitch.isChecked()) {
-                    nightTheme();
-                    isNight = true;
-                    MainActivity.sharedPreferences.edit().putBoolean("isNight", isNight).apply();
-                }
-                else {
-                    dayTheme();
-                    isNight = false;
-                    MainActivity.sharedPreferences.edit().putBoolean("isNight", isNight).apply();
-
-                }
-            }
-        });
-
-
     }
 
 

@@ -1,9 +1,12 @@
 package com.example.oxforddict;
 
+import androidx.annotation.MainThread;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.constraintlayout.widget.ConstraintLayout;
+import androidx.lifecycle.ViewModelProvider;
 
+import android.app.MediaRouteButton;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -13,11 +16,7 @@ import android.media.Image;
 import android.media.MediaPlayer;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.RemoteException;
-import android.provider.MediaStore;
-import android.util.Base64InputStream;
-import android.util.JsonReader;
+
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -28,15 +27,9 @@ import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import com.google.gson.JsonPrimitive;
 import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.JsonPath;
 
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -62,17 +55,20 @@ import static com.jayway.jsonpath.JsonPath.parse;
 
 public class MainActivity extends AppCompatActivity {
 
+    MainActivityViewModel myViewModel;
+
     ArrayList<String> result;
     static boolean isNight;
     ConstraintLayout mainLayout;
     EditText searchEditText;
     Button searchButton;
-    String audioURL;
-    TextView wordIsTextView, defIsTextView, translTextView, resultTextView;
-    ImageView soundImageView;
-    static SharedPreferences sharedPreferences;
-    String appId;
-    String appKey;
+    static String audioURL;
+    TextView wordIsTextView;
+    static TextView defIsTextView;
+    static TextView translTextView;
+    static TextView resultTextView;
+    static ImageView soundImageView;
+
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -90,9 +86,8 @@ public class MainActivity extends AppCompatActivity {
             case R.id.settings:
                 Log.i("Menu iten selected", "Settings");
                 Intent intent = new Intent(getApplicationContext(), SettingsActivity.class);
-                intent.putExtra("AppId", appId);
-                intent.putExtra("AppKey", appKey);
-                intent.putExtra("isNight", isNight);
+                intent.putExtra("AppId", myViewModel.getAppId());
+                intent.putExtra("AppKey", myViewModel.getAppKey());
                 startActivity(intent);
                 return true;
             default:
@@ -105,17 +100,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        sharedPreferences = this.getSharedPreferences("com.example.oxforddict", Context.MODE_PRIVATE);
-        //sharedPreferences.edit().putString("AppId","5e360595").apply();
-        //sharedPreferences.edit().putString("AppKey","6ef6b77b7b0bcdd1a395e409655558e9").apply();
-        //sharedPreferences.edit().putBoolean("isNight", false).apply();
-
-        appId = sharedPreferences.getString("AppId", "");
-        appKey = sharedPreferences.getString("AppKey", "");
-        isNight = sharedPreferences.getBoolean("isNight", false);
-
-        Log.i("ISNIGHT", "" + isNight);
-
+        myViewModel = new ViewModelProvider(this).get(MainActivityViewModel.class);
 
         searchEditText = (EditText) findViewById(R.id.searchEditText);
         searchButton = (Button) findViewById(R.id.searchButton);
@@ -126,8 +111,6 @@ public class MainActivity extends AppCompatActivity {
         soundImageView = (ImageView) findViewById(R.id.soundImageView);
         resultTextView = (TextView) findViewById(R.id.resultTextView);
 
-        if (isNight) nightTheme();
-        else dayTheme();
 
         searchButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -136,7 +119,7 @@ public class MainActivity extends AppCompatActivity {
                 wordIsTextView.setText(searchEditText.getText());
                 searchEditText.setText("");
 
-                new CallbackTask().execute("", appId, appKey, word);
+                new CallbackTask().execute("", myViewModel.getAppId(), myViewModel.getAppKey(), word);
             }
         });
 
@@ -158,149 +141,6 @@ public class MainActivity extends AppCompatActivity {
                 player.start();
             }
         });
-    }
-
-    private String dictionaryEntries(final String myWord, final String fields) {
-        final String word = myWord;
-        final String word_id = word.toLowerCase();
-
-        return "https://od-api.oxforddictionaries.com/api/v2/entries/en-gb/" + word_id + "?strictMatch=false";
-    }
-
-    private class CallbackTask extends AsyncTask<String, Integer, String> {
-
-        String appId;
-        String appKey;
-        final String language = "en-gb";
-
-        protected String getLemma(String rawWord) throws IOException, JSONException {
-            String url = "https://od-api.oxforddictionaries.com:443/api/v2/lemmas/" + language + "/" + rawWord.toLowerCase();
-
-            BufferedReader breader = new BufferedReader(new InputStreamReader(getConnection(url).getInputStream()));
-
-            StringBuilder stringBuilder = new StringBuilder();
-            String line = null;
-            while ((line = breader.readLine()) != null) {
-                stringBuilder.append(line);
-            }
-            ArrayList<String> parsed = parse(stringBuilder.toString()).read("$..lexicalEntries[0].inflectionOf[0].text");
-
-            if (parsed.size() != 0)
-                return parsed.get(0);
-            else
-                return rawWord;
-        }
-
-        protected HttpsURLConnection getConnection(String rawurl) throws IOException {
-
-            URL url = new URL(rawurl);
-            HttpsURLConnection urlConnection = (HttpsURLConnection) url.openConnection();
-            urlConnection.setRequestProperty("Accept", "application/json");
-            urlConnection.setRequestProperty("app_id", appId);
-            urlConnection.setRequestProperty("app_key", appKey);
-            urlConnection.setConnectTimeout(100);
-
-            return urlConnection;
-        }
-
-        @Override
-        protected String doInBackground(String... params) {
-
-            //TODO: replace with your own app id and app key
-            appId = params[1];
-            appKey = params[2];
-            final String rawWord = params[3];
-
-            try {
-
-                HttpsURLConnection connect = getConnection(dictionaryEntries(getLemma(rawWord), ""));
-                // read the output from the server
-                BufferedReader reader = new BufferedReader(new InputStreamReader(connect.getInputStream()));
-                StringBuilder stringBuilder = new StringBuilder();
-
-                String line = null;
-                while ((line = reader.readLine()) != null) {
-                    stringBuilder.append(line + "\n");
-                }
-
-                return stringBuilder.toString();
-
-            } catch (Exception e) {
-                e.printStackTrace();
-                return e.toString();
-            }
-        }
-
-        @Override
-        protected void onPostExecute(String result) {
-            super.onPostExecute(result);
-
-            Object document = Configuration.defaultConfiguration().jsonProvider().parse(result);
-
-            ArrayList<String> lexical = JsonPath.read(document, "$..lexicalCategory.id");
-            ArrayList<String> audios = JsonPath.read(document, "$..audioFile");
-            audioURL = audios.get(0);
-
-            ArrayList<String> transcriptions = JsonPath.read(document, "$..phoneticSpelling");
-            ArrayList<String> dialects = JsonPath.read(document, "$..dialects");
-            ArrayList<LinkedHashMap<String, Object>> senses = JsonPath.read(document, "$.results[0].lexicalEntries[0].entries[0].senses");
-
-            //for (int i = 0; i < senses.size(); i++)
-            //    Log.i("SENSES1", "Definition " + senses.get(i).get("definitions").toString() + "EXAMPLES" + senses.get(i).get("examples").toString());
-
-            defIsTextView.setText(lexical.get(0).toString());
-            soundImageView.setVisibility(View.VISIBLE);
-            translTextView.setText("/" + transcriptions.get(0).toString() + "/");
-
-            String allSenses = "";
-            for (int i = 0; i < senses.size(); i++) {
-                allSenses += senses.get(i).get("definitions").toString().replace("[\"", "").replace("\"]","") +
-                        "\n" + "Examples:" + "\n" + senses.get(i).get("examples").toString().replace("[{\"text\":\"","").
-                        replace("\"},","").
-                        replace("{\"text\":\"", "").
-                        replace("\"}]","") + "\n\n";
-            }
-
-
-            resultTextView.setText(allSenses);
-
-
-        }
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        appId = sharedPreferences.getString("AppId", "");
-        appKey = sharedPreferences.getString("AppKey", "");
-        isNight = sharedPreferences.getBoolean("isNight", false);
-
-        if (isNight) nightTheme();
-        else dayTheme();
-    }
-
-    public void nightTheme() {
-        // Night mode
-        isNight = true;
-        mainLayout.setBackgroundColor(getResources().getColor(R.color.colorNight));
-        wordIsTextView.setTextColor(getResources().getColor(R.color.colorDay));
-        defIsTextView.setTextColor(getResources().getColor(R.color.colorDay));
-        translTextView.setTextColor(getResources().getColor(R.color.colorDay));
-        resultTextView.setTextColor(getResources().getColor(R.color.colorDay));
-        soundImageView.setImageResource(R.drawable.soundblack);
-    }
-
-
-    public void dayTheme() {
-        // Day mode
-        isNight = false;
-        mainLayout.setBackgroundColor(getResources().getColor(R.color.colorDay));
-        wordIsTextView.setTextColor(getResources().getColor(R.color.colorNight));
-        defIsTextView.setTextColor(getResources().getColor(R.color.colorNight));
-        translTextView.setTextColor(getResources().getColor(R.color.colorNight));
-        resultTextView.setTextColor(getResources().getColor(R.color.colorNight));
-        soundImageView.setImageResource(R.drawable.sound);
-
     }
 
 }
